@@ -1,0 +1,8 @@
+.venv
+CODEBASE_EXPLANATION.md
+__pycache__/
+*.pyc
+generate_sample_data.py
+QUICK_REFERENCE.md
+interactive_walkthrough.py
+

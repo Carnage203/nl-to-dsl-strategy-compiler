@@ -1,0 +1,53 @@
+
+
+
+%import common.WS
+%import common.NUMBER
+%import common.ESCAPED_STRING
+%ignore WS
+
+
+start: rule_block+
+
+
+rule_block: "ENTRY:" expr -> entry
+         | "EXIT:" expr -> exit
+
+
+expr: or_expr
+
+or_expr: and_expr ("OR" and_expr)*
+
+and_expr: comparison ("AND" comparison)*
+
+
+comparison: term op term -> comparison
+         | term cross_op term -> cross_comparison
+         | "(" expr ")" -> paren_expr
+
+
+OP: ">" | "<" | ">=" | "<=" | "=="
+op: OP
+
+
+cross_op: "crosses" "above" -> crosses_above
+        | "crosses" "below" -> crosses_below
+
+
+term: field -> field_term
+    | func_call -> func_term
+    | number -> number_term
+
+
+FIELD: "open" | "high" | "low" | "close" | "volume"
+field: FIELD
+
+
+func_call: "SMA" "(" field "," NUMBER ")" -> sma_call
+         | "RSI" "(" field "," NUMBER ")" -> rsi_call
+
+
+number: NUMBER suffix? -> number_value
+
+suffix: "K" -> k_suffix
+      | "M" -> m_suffix
