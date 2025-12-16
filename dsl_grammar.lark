@@ -1,53 +1,42 @@
-
-
-
 %import common.WS
-%import common.NUMBER
-%import common.ESCAPED_STRING
 %ignore WS
 
+start: statement+
 
-start: rule_block+
+statement: ENTRY COLON? expr
+         | EXIT COLON? expr
 
+?expr: expr AND expr   -> and_expr
+     | expr OR expr    -> or_expr
+     | term
 
-rule_block: "ENTRY:" expr -> entry
-         | "EXIT:" expr -> exit
+?term: comparison
+     | cross
+     | "(" expr ")"
 
+comparison: value OP value
+cross: value CROSSES (ABOVE | BELOW) value
 
-expr: or_expr
+?value: FIELD
+      | NUMBER
+      | function
 
-or_expr: and_expr ("OR" and_expr)*
+function: SMA
+        | RSI
 
-and_expr: comparison ("AND" comparison)*
+SMA: /SMA\s*\(\s*(OPEN|HIGH|LOW|CLOSE|VOLUME)\s*,\s*\d+\s*\)/i
+RSI: /RSI\s*\(\s*(OPEN|HIGH|LOW|CLOSE|VOLUME)\s*,\s*\d+\s*\)/i
 
+ENTRY: /ENTRY/i
+EXIT: /EXIT/i
+AND: /AND/i
+OR: /OR/i
+CROSSES: /CROSSES/i
+ABOVE: /ABOVE/i
+BELOW: /BELOW/i
 
-comparison: term op term -> comparison
-         | term cross_op term -> cross_comparison
-         | "(" expr ")" -> paren_expr
+COLON: ":"
 
-
-OP: ">" | "<" | ">=" | "<=" | "=="
-op: OP
-
-
-cross_op: "crosses" "above" -> crosses_above
-        | "crosses" "below" -> crosses_below
-
-
-term: field -> field_term
-    | func_call -> func_term
-    | number -> number_term
-
-
-FIELD: "open" | "high" | "low" | "close" | "volume"
-field: FIELD
-
-
-func_call: "SMA" "(" field "," NUMBER ")" -> sma_call
-         | "RSI" "(" field "," NUMBER ")" -> rsi_call
-
-
-number: NUMBER suffix? -> number_value
-
-suffix: "K" -> k_suffix
-      | "M" -> m_suffix
+FIELD: /OPEN|HIGH|LOW|CLOSE|VOLUME/i
+OP: ">=" | "<=" | "==" | ">" | "<"
+NUMBER: /\d+(\.\d+)?(K|M)?/i

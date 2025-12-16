@@ -156,7 +156,7 @@ class ASTCodeGenerator:
             return df[field_name]
         
         elif term_type == "func":
-            func_name = node["name"]
+            func_name = node["name"].lower()
             args = node["args"]
             
                                          
