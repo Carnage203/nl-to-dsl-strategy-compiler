@@ -1,178 +1,110 @@
-# NLP → DSL → AST → Python → Backtester Pipeline
+# LLM-Powered Trading Strategy Compiler
 
-A production-ready system that converts natural language trading rules into executable Python code and runs backtests.
+A robust pipeline that converts natural language trading strategies into executable code and runs backtests.
 
 ## Overview
 
-This system takes English trading rule descriptions and produces:
+This project bridges the gap between natural language and executable trading code.
 
-1. DSL (Domain-Specific Language) rules
-2. AST (Abstract Syntax Tree) representation
-3. Python code that computes entry/exit signals
-4. Backtest results with performance metrics
+**What it does:**
+It allows you to describe trading strategies in plain English (e.g., _"Buy when the price crosses above the 20-day average"_), and it automatically:
+
+1.  **Understands** your intent (using LLMs).
+2.  **Compiles** it into a strict, safe mathematical representation (DSL/AST).
+3.  **Backtests** it against historical data to tell you how much money it would have made (or lost).
+
+Under the hood, it uses **Llama-3** to parse intent, but relies on a deterministic **Compiler** (Parser + AST) for execution, ensuring that the math is always correct and verifiable.
+
+**Key Features:**
+
+- **LLM-Driven Understanding**: Handles synonyms ("price" -> "close"), relative dates ("last week"), and complex logic.
+- **Robust DSL**: Supports arithmetic (`volume * 1.5`), logical operators (`AND`/`OR`), and function-style or infix cross operators (`CROSS_ABOVE`).
+- **Advanced Backtesting**: Calculates **Total Return %**, **Max Drawdown**, and tracks positions with a detailed trade log.
+- **Safety**: Strict JSON intermediate layer ensures deterministic logic generation.
 
 ## Architecture
 
-```
-Natural Language Input
-    ↓
-NL → DSL Translator
-    ↓
-DSL Parser (Lark)
-    ↓
-AST (Python dicts)
-    ↓
-Code Generator
-    ↓
-Backtester
-    ↓
-Trading Results
+```mermaid
+graph TD
+    NL[Natural Language Input] -->|LLM| JSON[Structured JSON]
+    JSON -->|LLM| DSL[Strict DSL]
+    DSL -->|Lark Parser| AST[Abstract Syntax Tree]
+    AST -->|Compiler| Py[Pandas/Python Code]
+    Py -->|Simulator| Results[Backtest Metrics]
 ```
 
 ## Installation
 
-```bash
-pip install -r requirements.txt
-```
+1. **Clone the repository**
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Set up API Key**:
+   Create a `.env` file in the root directory:
+   ```env
+   GROQ_API_KEY=your_groq_api_key_here
+   ```
 
-Or:
+## Usage
 
-```bash
-pip install -e .
-```
+1. **Generate Data** (Optional, if you need sample data):
 
-**Requirements:** Python 3.11+
+   ```bash
+   python generate_sample_data.py
+   ```
 
-## Quick Start
+2. **Run the Demo**:
 
-Generate sample data and run the demo:
+   ```bash
+   python demo.py
+   ```
 
-```bash
-python generate_sample_data.py
-python demo.py
-```
+3. **Enter a Strategy**:
+
+   > "Buy when close is above the 20-day moving average OR volume is above 1 million. Exit when RSI(14) is below 30."
+
+   **Output**:
+
+   ```text
+   Generated DSL:
+   ENTRY:
+   close > sma(close,20) OR volume > 1000000
+   EXIT:
+   rsi(close,14) < 30
+
+   Backtest Result:
+   Total Return: 93.6%
+   Max Drawdown: -3.1%
+   Trades: 4
+   ```
 
 ## DSL Syntax
 
-### Rule Blocks
+The compiler automatically generates this from your natural language, but here is the underlying syntax:
 
-```
-ENTRY: close > SMA(close,20)
-EXIT: RSI(close,14) < 30
-```
-
-### Operators
-
-- Comparison: `>`, `<`, `>=`, `<=`, `==`
-- Logical: `AND`, `OR`
-- Cross events: `crosses above`, `crosses below`
-
-### Fields
-
-`open`, `high`, `low`, `close`, `volume`
-
-### Indicators
-
-- `SMA(field, N)` - Simple Moving Average
-- `RSI(field, N)` - Relative Strength Index
-
-### Number Formats
-
-- Integers: `100`, `20`
-- Floats: `100.5`, `30.25`
-- Suffixes: `1K` (1,000), `1M` (1,000,000)
-
-### Examples
-
-Simple entry:
-
-```
-ENTRY: close > 100
-```
-
-Multiple conditions:
-
-```
-ENTRY: close > SMA(close,20) AND volume > 1M
-```
-
-Cross event:
-
-```
-ENTRY: close crosses above SMA(close,20)
-```
-
-Complex logic:
-
-```
-ENTRY: (close > 100 OR volume > 1M) AND RSI(close,14) > 50
-EXIT: RSI(close,14) < 30
-```
+- **Logic**: `AND`, `OR`
+- **Comparators**: `>`, `<`, `>=`, `<=`, `==`, `CROSS_ABOVE`, `CROSS_BELOW`
+- **Arithmetic**: `+`, `-`, `*`, `/`
+- **Functions**: `sma(field, window)`, `rsi(field, window)`
+- **Variables**: `open`, `high`, `low`, `close`, `volume` (and suffixes `_yesterday`, `_last_week`)
 
 ## Project Structure
 
-```
+```text
 .
-├── README.md
-├── requirements.txt
-├── pyproject.toml
-├── dsl_grammar.lark         # Lark grammar file
-├── parser.py                # DSL parser
-├── indicators.py            # Technical indicators
-├── ast_to_python.py         # Code generator
-├── nl_to_dsl.py             # NL translator
-├── simulator.py             # Backtester
-├── demo.py                  # Demo script
-├── generate_sample_data.py
-└── tests/
-    ├── test_parser.py
-    ├── test_ast_generator.py
-    └── test_simulator.py
+├── demo.py                  # Main entry point (CLI)
+├── nl_to_dsl.py             # LLM chain (NL -> JSON -> DSL)
+├── dsl_grammar.lark         # Formal grammar definition
+├── parser.py                # Lark parser initialization
+├── ast_builder.py           # Transforms Parse Tree -> AST
+├── ast_nodes.py             # AST Node Definitions
+├── ast_to_python.py         # Compiles AST -> Pandas Series
+├── simulator.py             # Backtesting engine
+├── llm_client.py            # Groq API client
+└── requirements.txt         # Dependencies
 ```
-
-## Components
-
-**Natural Language Translator** - Converts English to DSL using pattern matching
-
-**DSL Parser** - Parses DSL text into AST using Lark LALR parser
-
-**Code Generator** - Converts AST to vectorized pandas code
-
-**Backtester** - Long-only backtester with next-bar execution (no lookahead bias)
-
-**Indicators** - SMA and RSI implementations
-
-## Testing
-
-```bash
-python -m pytest tests/
-```
-
-Or run individual tests:
-
-```bash
-python -m unittest tests/test_parser.py
-```
-
-## Features
-
-- Rule-based natural language translation
-- LALR parser with clear error messages
-- Vectorized pandas operations for performance
-- Next-bar execution (realistic, no same-bar fills)
-- Comprehensive test coverage
-
-## Limitations
-
-- Long-only strategies (no short selling)
-- 100% capital allocation per trade
-- No transaction costs or slippage
-- Limited indicators (SMA, RSI only)
-
-## License
-
-Educational/assignment purposes
 
 ## Author
 
-Created for Rootaly AI Assignment
+Created for Rootaly AI Assignment.

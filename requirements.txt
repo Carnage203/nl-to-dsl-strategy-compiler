@@ -1,4 +1,5 @@
 pandas
 lark
 numpy
-word2number
+groq
+dotenv

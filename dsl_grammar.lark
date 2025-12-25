@@ -1,42 +1,60 @@
-%import common.WS
-%ignore WS
+?start: strategy
 
-start: statement+
+strategy: entry_block? exit_block?
 
-statement: ENTRY COLON? expr
-         | EXIT COLON? expr
+entry_block: ENTRY logic_expr
+exit_block: EXIT logic_expr
 
-?expr: expr AND expr   -> and_expr
-     | expr OR expr    -> or_expr
-     | term
+ENTRY: "ENTRY:"
+EXIT: "EXIT:"
 
-?term: comparison
-     | cross
-     | "(" expr ")"
+?logic_expr: logic_expr AND logic_term   -> and_expr
+           | logic_expr OR logic_term    -> or_expr
+           | logic_term
 
-comparison: value OP value
-cross: value CROSSES (ABOVE | BELOW) value
+?logic_term: comparison
+           | cross_expr
+           | "(" logic_expr ")"
 
-?value: FIELD
-      | NUMBER
-      | function
+comparison: value comparator value
 
-function: SMA
-        | RSI
+cross_expr: prefix_cross | infix_cross
 
-SMA: /SMA\s*\(\s*(OPEN|HIGH|LOW|CLOSE|VOLUME)\s*,\s*\d+\s*\)/i
-RSI: /RSI\s*\(\s*(OPEN|HIGH|LOW|CLOSE|VOLUME)\s*,\s*\d+\s*\)/i
+prefix_cross: CROSS_OP "(" value "," value ")"
+infix_cross: value CROSS_OP value
 
-ENTRY: /ENTRY/i
-EXIT: /EXIT/i
-AND: /AND/i
-OR: /OR/i
-CROSSES: /CROSSES/i
-ABOVE: /ABOVE/i
-BELOW: /BELOW/i
+CROSS_OP: "CROSS_ABOVE" | "CROSS_BELOW"
 
-COLON: ":"
+comparator: GT | LT | GTE | LTE | EQ
+GT: ">"
+LT: "<"
+GTE: ">="
+LTE: "<="
+EQ: "=="
 
-FIELD: /OPEN|HIGH|LOW|CLOSE|VOLUME/i
-OP: ">=" | "<=" | "==" | ">" | "<"
-NUMBER: /\d+(\.\d+)?(K|M)?/i
+AND: "AND"
+OR: "OR"
+
+?value: value "+" atom   -> add
+      | value "-" atom   -> sub
+      | atom
+
+?atom: atom "*" factor   -> mul
+     | atom "/" factor   -> div
+     | factor
+
+?factor: function_call
+       | IDENTIFIER
+       | NUMBER
+       | "(" value ")"
+
+function_call: IDENTIFIER "(" arg_list ")"
+arg_list: value ("," value)*
+
+IDENTIFIER: /[a-zA-Z_][a-zA-Z0-9_]*/
+NUMBER: /[0-9]+(\.[0-9]+)?/
+
+
+%ignore " "
+%ignore /\r?\n/
+
